@@ -1,0 +1,57 @@
+#!/bin/bash
+#Tecan
+#Description: based on http://elephly.net/posts/2013-10-01-dm-crypt.html https://weichselbraun.net/manual/encrypted_dvd/encrypted_dvd.html
+
+#reiserfs option
+
+csb=cryptsetup2
+mountpoint=EDISK
+imagename=EDISK-tmp.iso
+mapper=EDISK-Device
+
+dir=$(pwd)
+#zenity drag and drop ?
+dd if=/dev/zero bs=1M count=665 of=$imagename
+sudo $csb luksFormat "$imagename"
+sudo $csb luksOpen $dir/$imagename $mapper
+#expect YES
+#palindromeDVD expect enter password : encryptedDVD12
+sudo mkfs -t ext4 "/dev/mapper/$mapper"
+mkdir "$dir/$mountpoint"
+sudo mount "/dev/mapper/$mapper" "$dir/$mountpoint"
+sudo umount "$dir/$mountpoint"
+sudo $csb luksClose $mapper
+sudo $csb luksOpen $dir/$imagename $mapper
+sudo mount "/dev/mapper/$mapper" "$dir/$mountpoint"
+
+#sudo chown [your name session] my-mount-point
+
+
+
+
+
+
+#    dd if=/dev/zero of=dvd.img bs=1000000 count=4700
+
+#Mount the image on a loopback device and prepare it for further use with LUKS:
+
+#    losetup /dev/loop0 dvd.img
+#    cryptsetup -c aes-cbc-essiv:sha256 -y -s 256 luksFormat /dev/loop0
+
+#Open the encrypted device with cryptsetup and create the file system.
+
+#    cryptsetup luksOpen /dev/loop0 dvd
+#    mkudffs --media-type=dvd /dev/mapper/dvd
+
+#Mount the device (you'll have to remount it in read-write mode).
+
+#   mount /dev/mapper/dvd /media/dvd
+#   mount -o remount,rw /media/dvd
+
+#Now copy your data to the DVD (/media/dvd)
+
+#Close the devicemapper crypto device and the loopback device
+
+#   cryptsetup luksClose dvd
+#   losetup -d /dev/loop0
+
