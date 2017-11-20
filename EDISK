@@ -1,32 +1,67 @@
 #!/bin/bash
 #Tecan
 #Description: based on http://elephly.net/posts/2013-10-01-dm-crypt.html https://weichselbraun.net/manual/encrypted_dvd/encrypted_dvd.html
+#I personally use a 2048-bit key, and find that my CPU can keep up with the maximum bandwidth of my SATA drive with no problems. I'd recommend a 2048 on any modern hardware (1GHz or faster processor). -Josh Glover
+
+#oauth server
 
 #reiserfs option
-
-csb=cryptsetup2
-mountpoint=EDISK
+#csb=cryptsetup
+#csb=cryptsetup2
+csb=cryptsetup
+mountpoint=EDISK-mount
 imagename=EDISK-tmp.iso
 mapper=EDISK-Device
+mountdir=/dev/mapper/
 
 dir=$(pwd)
+uid=$(id -u)
+gid=$(id -g)
+
+
+dir=$(pwd)
+echo "would you like to make a new image y/n"
+read loading
 #zenity drag and drop ?
-dd if=/dev/zero bs=1M count=665 of=$imagename
-sudo $csb luksFormat "$imagename"
-sudo $csb luksOpen $dir/$imagename $mapper
-#expect YES
-#palindromeDVD expect enter password : encryptedDVD12
-sudo mkfs -t ext4 "/dev/mapper/$mapper"
-mkdir "$dir/$mountpoint"
-sudo mount "/dev/mapper/$mapper" "$dir/$mountpoint"
+if [ $loading == y ];then 
+    #if the imagename exists then these 2 lines can be skipped
+    dd if=/dev/zero bs=1M count=650 of="$dir/$imagename" #665-safe 700-max cdr , 4587.45-safe max-4700 dvd or 8298.4-safe max-8500 dvd-DL
+    sudo $csb luksFormat "$dir/$imagename" #since this is used this is not needed -  growisofs -dvd-compat -Z /dev/sr0=image.iso
+    sudo $csb luksOpen "$dir/$imagename" $mapper
+    #expect YES
+    #palindromeDVD expect enter password : encryptedDVD12
+    sudo ./mkfs.ext4 -t ext4 "/dev/mapper/$mapper"
+    sudo mount "/dev/mapper/$mapper" "$dir/$mountpoint"
+    #sudo mount -t ext4 -o uid=$uid,gid=$gid "/dev/mapper/$mapper" "$dir/$mountpoint"
+    sudo chown $USER "$dir/$mountpoint/" -R
+    mkdir "$dir/$mountpoint"
+else
+    sudo $csb luksOpen "$dir/$imagename" $mapper
+    sudo mount "/dev/mapper/$mapper" "$dir/$mountpoint"
+fi
+echo pause before unmounting and closing
+read
 sudo umount "$dir/$mountpoint"
 sudo $csb luksClose $mapper
-sudo $csb luksOpen $dir/$imagename $mapper
-sudo mount "/dev/mapper/$mapper" "$dir/$mountpoint"
+#keyctl unlink
+
+#cdrecord -v -dao dev=/dev/sr0 speed=16 "$dir/$imagename"
 
 #sudo chown [your name session] my-mount-point
 
 
+
+#mkfs.reiserfs /dev/loop0 
+#mount -t reiserfs /dev/loop0 /media/private/
+#umount /media/private/
+#losetup -d /dev/loop0
+
+#modprobe cryptoloop
+#modprobe aes
+#losetup -e aes /dev/loop0 /dev/sda3
+#mount -t reiserfs /dev/loop0 /media/private/
+#dd if=/dev/zero of=/root/private bs=1024M count=1
+#shred -v -n 1 /root/private 
 
 
 
